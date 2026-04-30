@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GitHost — Drop. Get a link.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #0c0c0b;
+  --s1:      #141413;
+  --s2:      #1c1c1b;
+  --border:  rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --text:    #edeae4;
+  --muted:   #7a776f;
+  --dim:     #4a4845;
+  --accent:  #b8f050;
+  --adim:    #7aaa28;
+  --mono:    'DM Mono', monospace;
+  --serif:   'Instrument Serif', Georgia, serif;
+  --radius:  6px;
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--mono); -webkit-font-smoothing: antialiased; }
+
+/* grain */
+body::after {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.04;
+}
+
+/* ── shell ── */
+.shell {
+  min-height: 100vh;
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── header ── */
+header {
+  padding: 1.75rem 0 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+.logo {
+  font-family: var(--serif);
+  font-size: 1.35rem;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+.logo-dot { color: var(--accent); font-size: 1.6rem; line-height: 0; position: relative; top: 3px; }
+.header-tag { font-size: 0.68rem; color: var(--dim); letter-spacing: 0.07em; text-transform: uppercase; }
+
+/* ── hero ── */
+.hero {
+  padding: 3.5rem 0 2.5rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2.5rem;
+}
+.hero-eyebrow {
+  font-size: 0.68rem;
+  color: var(--adim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hero-eyebrow::before {
+  content: '';
+  display: inline-block;
+  width: 20px; height: 1px;
+  background: var(--adim);
+}
+.hero-title {
+  font-family: var(--serif);
+  font-size: clamp(2.4rem, 6vw, 3.6rem);
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  margin-bottom: 1.25rem;
+}
+.hero-title em { color: var(--accent); font-style: italic; }
+.hero-steps {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+.hs {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.72rem;
+  color: var(--muted);
+  letter-spacing: 0.03em;
+}
+.hs-n {
+  width: 18px; height: 18px;
+  border: 1px solid var(--border2);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.6rem;
+  color: var(--dim);
+  flex-shrink: 0;
+}
+.hs-arrow { color: var(--dim); margin: 0 10px; font-size: 0.7rem; }
+
+/* ── dropzone ── */
+#dropzone {
+  position: relative;
+  border: 1px dashed var(--border2);
+  border-radius: var(--radius);
+  padding: 5rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  background: var(--s1);
+  overflow: hidden;
+}
+#dropzone.drag, #dropzone:hover { border-color: var(--accent); background: #111a04; }
+#dropzone input {
+  position: absolute; inset: 0;
+  opacity: 0; cursor: pointer;
+  width: 100%; height: 100%;
+}
+.dz-arrow {
+  font-size: 2.5rem;
+  color: var(--dim);
+  margin-bottom: 1rem;
+  display: block;
+  transition: color 0.15s, transform 0.15s;
+  font-style: normal;
+}
+#dropzone:hover .dz-arrow { color: var(--accent); transform: translateY(-3px); }
+.dz-title {
+  font-family: var(--serif);
+  font-size: 1.4rem;
+  color: var(--text);
+  margin-bottom: 0.4rem;
+}
+.dz-sub { font-size: 0.72rem; color: var(--muted); line-height: 1.6; }
+.dz-compress-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 0.75rem;
+  font-size: 0.68rem;
+  color: var(--adim);
+  background: #111a04;
+  border: 1px solid rgba(184,240,80,0.15);
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+/* ── file preview ── */
+#fileArea { display: none; margin-top: 1.25rem; }
+.file-card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.thumb {
+  width: 52px; height: 52px;
+  border-radius: 4px;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  font-size: 1.4rem;
+}
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.file-meta { flex: 1; min-width: 0; }
+.fname {
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 3px;
+}
+.fsize { font-size: 0.7rem; color: var(--muted); }
+.pill {
+  font-size: 0.62rem;
+  padding: 3px 9px;
+  border-radius: 20px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.pill-warn { background: #1f1506; color: #c49030; border: 1px solid rgba(196,144,48,0.25); }
+.pill-ok   { background: #0f1a04; color: var(--accent); border: 1px solid rgba(184,240,80,0.2); }
+
+/* ── progress ── */
+#progressArea { display: none; margin-top: 0.75rem; }
+.prog-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+.prog-track { height: 2px; background: var(--border); border-radius: 1px; }
+.prog-fill { height: 100%; background: var(--accent); border-radius: 1px; width: 0; transition: width 0.25s ease; }
+
+/* ── status ── */
+#statusArea { display: none; margin-top: 0.75rem; }
+.status-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+.spin {
+  width: 12px; height: 12px;
+  border: 1.5px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── upload btn ── */
+#uploadBtn {
+  display: none;
+  width: 100%;
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--accent);
+  color: #0c0c0b;
+  border: none;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+}
+#uploadBtn:hover:not(:disabled) { opacity: 0.88; }
+#uploadBtn:active:not(:disabled) { transform: scale(0.99); }
+#uploadBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ── error ── */
+#errorArea { display: none; margin-top: 0.75rem; }
+.err-box {
+  background: #180a0a;
+  border: 1px solid rgba(200,60,60,0.25);
+  color: #c84040;
+  font-size: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  line-height: 1.55;
+}
+
+/* ── result ── */
+#resultArea { display: none; margin-top: 1.25rem; }
+.result-card {
+  background: #0f1a04;
+  border: 1px solid rgba(184,240,80,0.2);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  animation: up 0.2s ease;
+}
+@keyframes up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+.res-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+.res-ok {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.72rem;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.res-ok-dot {
+  width: 6px; height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+}
+.res-tabs { display: flex; gap: 3px; }
+.rtab {
+  font-size: 0.65rem;
+  padding: 3px 10px;
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--mono);
+  letter-spacing: 0.03em;
+  transition: all 0.12s;
+}
+.rtab.active { background: var(--accent); color: #0c0c0b; border-color: var(--accent); font-weight: 500; }
+
+.code-block {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.8rem 0.9rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 0.5rem;
+}
+.code-text {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: 0.73rem;
+  color: var(--text);
+  word-break: break-all;
+  line-height: 1.6;
+}
+.copy-btn {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  padding: 4px 11px;
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: var(--mono);
+  white-space: nowrap;
+  transition: all 0.1s;
+}
+.copy-btn:hover { background: var(--s2); color: var(--text); }
+.copy-btn.ok { color: var(--accent); border-color: rgba(184,240,80,0.3); }
+.res-hint { font-size: 0.67rem; color: var(--dim); }
+
+.preview-area { margin-top: 1rem; }
+.preview-area img, .preview-area video {
+  max-width: 100%; max-height: 220px;
+  border-radius: 4px; display: block; object-fit: cover;
+}
+
+.another-btn {
+  display: block;
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.7rem;
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.12s;
+  text-align: center;
+}
+.another-btn:hover { color: var(--text); border-color: var(--border2); background: var(--s2); }
+
+/* ── footer ── */
+footer {
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  padding: 1.25rem 0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.67rem;
+  color: var(--dim);
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header>
+    <div class="logo">git<span class="logo-dot">·</span>host</div>
+    <div class="header-tag">No login. No repo. Just a link.</div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-eyebrow">README media hosting</div>
+    <h1 class="hero-title">Drop a file.<br /><em>Get a link.</em></h1>
+    <div class="hero-steps">
+      <div class="hs"><div class="hs-n">1</div> Drop your file</div>
+      <span class="hs-arrow">→</span>
+      <div class="hs"><div class="hs-n">2</div> Auto-compress if needed</div>
+      <span class="hs-arrow">→</span>
+      <div class="hs"><div class="hs-n">3</div> Copy link → README</div>
+    </div>
+  </section>
+
+  <!-- dropzone -->
+  <div id="dropzone">
+    <input type="file" id="fileInput" accept="image/*,video/*" />
+    <em class="dz-arrow">↑</em>
+    <div class="dz-title">Click or drag your media here</div>
+    <div class="dz-sub">Images · Videos · GIFs<br />JPG, PNG, WEBP, GIF, MP4, MOV, WEBM</div>
+    <div class="dz-compress-note">⚡ Images over 10 MB are auto-compressed</div>
+  </div>
+
+  <!-- selected file info -->
+  <div id="fileArea"></div>
+
+  <!-- progress bar (compression) -->
+  <div id="progressArea">
+    <div class="prog-label">
+      <span id="progLabel">Compressing…</span>
+      <span id="progPct">0%</span>
+    </div>
+    <div class="prog-track"><div class="prog-fill" id="progFill"></div></div>
+  </div>
+
+  <!-- status spinner -->
+  <div id="statusArea">
+    <div class="status-line">
+      <div class="spin"></div>
+      <span id="statusText">Uploading…</span>
+    </div>
+  </div>
+
+  <!-- error -->
+  <div id="errorArea"></div>
+
+  <!-- upload button -->
+  <button id="uploadBtn" onclick="doUpload()">Get my link →</button>
+
+  <!-- result -->
+  <div id="resultArea"></div>
+
+  <footer>
+    <span>githost — built for README lovers</span>
+    <span>files hosted on GitHub CDN</span>
+  </footer>
+</div>
+
+<script>
+const MAX = 10 * 1024 * 1024; // 10 MB
+let file = null;
+let resultUrl = null;
+let activeTab = 'markdown';
+
+// ── dropzone wiring ──
+const dz = document.getElementById('dropzone');
+const fi = document.getElementById('fileInput');
+
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag');
+  if (e.dataTransfer.files[0]) pick(e.dataTransfer.files[0]);
+});
+fi.addEventListener('change', e => { if (e.target.files[0]) pick(e.target.files[0]); });
+
+function pick(f) {
+  file = f;
+  resultUrl = null;
+  const isVid = f.type.startsWith('video/');
+  const big   = !isVid && f.size > MAX;
+
+  // thumb
+  let thumbHtml = isVid
+    ? `<div class="thumb">🎬</div>`
+    : `<div class="thumb"><img id="prevImg" /></div>`;
+
+  document.getElementById('fileArea').style.display = 'block';
+  document.getElementById('fileArea').innerHTML = `
+    <div class="file-card">
+      ${thumbHtml}
+      <div class="file-meta">
+        <div class="fname">${f.name}</div>
+        <div class="fsize">${fmt(f.size)} · ${f.type || 'unknown'}</div>
+      </div>
+      <span class="pill ${big ? 'pill-warn' : 'pill-ok'}">${big ? 'will compress' : 'ready'}</span>
+    </div>`;
+
+  if (!isVid) {
+    const r = new FileReader();
+    r.onload = e => { const img = document.getElementById('prevImg'); if (img) img.src = e.target.result; };
+    r.readAsDataURL(f);
+  }
+
+  document.getElementById('uploadBtn').style.display = 'block';
+  hide('progressArea'); hide('statusArea'); hide('errorArea'); hide('resultArea');
+  document.getElementById('uploadBtn').disabled = false;
+}
+
+// ── upload ──
+async function doUpload() {
+  if (!file) return;
+  const btn = document.getElementById('uploadBtn');
+  btn.disabled = true;
+  hide('errorArea'); hide('resultArea'); hide('progressArea'); hide('statusArea');
+
+  let toUpload = file;
+  const isVid = file.type.startsWith('video/');
+
+  // compress if image > 10MB
+  if (!isVid && file.size > MAX) {
+    show('progressArea');
+    try {
+      toUpload = await imageCompression(file, {
+        maxSizeMB: 9.5,
+        maxWidthOrHeight: 4096,
+        useWebWorker: true,
+        onProgress: p => setProgress(p)
+      });
+      setProgress(100);
+    } catch(e) {
+      err('Compression failed: ' + e.message);
+      btn.disabled = false;
+      return;
+    }
+  }
+
+  hide('progressArea');
+  show('statusArea');
+  setStatus('Uploading to GitHub…');
+
+  try {
+    const buf = await toUpload.arrayBuffer();
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      headers: {
+        'Content-Type': toUpload.type || file.type || 'application/octet-stream',
+        'X-File-Name': encodeURIComponent(file.name),
+        'X-File-Type': toUpload.type || file.type
+      },
+      body: buf
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+    resultUrl = data.url;
+    hide('statusArea');
+    showResult(resultUrl, file.name, isVid);
+  } catch(e) {
+    err('Upload failed: ' + e.message);
+  }
+  btn.disabled = false;
+}
+
+// ── result ──
+function showResult(url, name, isVid) {
+  activeTab = 'markdown';
+  renderResult(url, name, isVid);
+  show('resultArea');
+}
+
+function renderResult(url, name, isVid) {
+  const tabs = ['markdown','html','url'];
+  const tabsHtml = tabs.map(t =>
+    `<button class="rtab ${t === activeTab ? 'active' : ''}" onclick="setTab('${t}')">${t}</button>`
+  ).join('');
+
+  let code, hint;
+  if (activeTab === 'markdown') {
+    code = isVid ? `<video src="${url}" controls></video>` : `![${name}](${url})`;
+    hint = 'Paste directly into your README.md';
+  } else if (activeTab === 'html') {
+    code = isVid
+      ? `<video src="${url}" controls width="800"></video>`
+      : `<img width="800" alt="${name}" src="${url}" />`;
+    hint = 'Use as HTML in your README';
+  } else {
+    code = url;
+    hint = 'Raw GitHub CDN URL';
+  }
+
+  const previewHtml = isVid
+    ? `<div class="preview-area"><video src="${url}" controls></video></div>`
+    : `<div class="preview-area"><img src="${url}" alt="preview" /></div>`;
+
+  document.getElementById('resultArea').innerHTML = `
+    <div class="result-card">
+      <div class="res-header">
+        <div class="res-ok"><div class="res-ok-dot"></div> link ready</div>
+        <div class="res-tabs">${tabsHtml}</div>
+      </div>
+      <div class="code-block">
+        <div class="code-text" id="codeText">${esc(code)}</div>
+        <button class="copy-btn" id="copyBtn" onclick="doCopy()">Copy</button>
+      </div>
+      <div class="res-hint">${hint} · hosted on GitHub CDN forever</div>
+      ${previewHtml}
+    </div>
+    <button class="another-btn" onclick="reset()">Upload another file</button>
+  `;
+}
+
+function setTab(t) {
+  activeTab = t;
+  renderResult(resultUrl, file.name, file.type.startsWith('video/'));
+}
+
+function doCopy() {
+  navigator.clipboard.writeText(document.getElementById('codeText').textContent).then(() => {
+    const b = document.getElementById('copyBtn');
+    b.textContent = 'Copied!'; b.classList.add('ok');
+    setTimeout(() => { b.textContent = 'Copy'; b.classList.remove('ok'); }, 1800);
+  });
+}
+
+function reset() {
+  file = null; resultUrl = null;
+  document.getElementById('fileInput').value = '';
+  hide('fileArea'); hide('progressArea'); hide('statusArea'); hide('errorArea'); hide('resultArea');
+  document.getElementById('uploadBtn').style.display = 'none';
+}
+
+// ── helpers ──
+function show(id) { document.getElementById(id).style.display = 'block'; }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+function setStatus(msg) { document.getElementById('statusText').textContent = msg; }
+function setProgress(p) {
+  document.getElementById('progFill').style.width = p + '%';
+  document.getElementById('progPct').textContent = Math.round(p) + '%';
+}
+function err(msg) {
+  hide('statusArea');
+  show('errorArea');
+  document.getElementById('errorArea').innerHTML = `<div class="err-box">${msg}</div>`;
+}
+function fmt(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
